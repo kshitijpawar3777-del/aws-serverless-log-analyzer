@@ -1,0 +1,7 @@
+2026-10-27 09:00:01 INFO Application started
+2026-10-27 09:00:03 INFO Connected to database
+2026-10-27 09:00:05 WARNING Retry attempt 1
+2026-10-27 09:00:07 ERROR Database connection timed out
+2026-10-27 09:00:09 INFO Retry scheduled
+2026-10-27 09:00:12 ERROR Request failed with status 500
+2026-10-27 09:00:14 DEBUG Request payload validated

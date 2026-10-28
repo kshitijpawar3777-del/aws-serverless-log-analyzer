@@ -1,0 +1,16 @@
+{
+  "source_bucket": "YOUR_BUCKET_NAME",
+  "source_key": "logs/sample.log",
+  "processed_at_utc": "<generated at runtime>",
+  "total_non_empty_lines": 7,
+  "log_level_counts": {
+    "ERROR": 2,
+    "WARNING": 1,
+    "INFO": 3,
+    "DEBUG": 1
+  },
+  "error_examples": [
+    "2026-10-27 09:00:07 ERROR Database connection timed out",
+    "2026-10-27 09:00:12 ERROR Request failed with status 500"
+  ]
+}
