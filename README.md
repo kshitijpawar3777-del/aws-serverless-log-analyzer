@@ -1,65 +1,127 @@
 # AWS Serverless Log Analyzer
 
-A small event-driven cloud project: uploading a `.log` file to an Amazon S3 `logs/` prefix triggers an AWS Lambda function. The function counts INFO, WARNING, ERROR and DEBUG lines, then saves a JSON report under `reports/`.
+An event-driven serverless project that automatically analyzes log files uploaded to Amazon S3. An S3 event triggers a Python AWS Lambda function, which counts log severity levels and saves a JSON summary back to S3.
 
 ## Architecture
 
-`Upload log -> Amazon S3 (logs/) -> S3 ObjectCreated event -> AWS Lambda (Python) -> JSON report in S3 (reports/) -> CloudWatch Logs`
+```text
+Upload sample.log
+       |
+       v
+Amazon S3 (logs/)
+       |
+       | S3 ObjectCreated event
+       v
+AWS Lambda (Python + boto3)
+       |
+       | Analyze log severity levels
+       v
+Amazon S3 (reports/)
+       |
+       v
+sample.log.summary.json
 
-## Services and concepts demonstrated
+CloudWatch Logs -> Execution monitoring and troubleshooting
+```
 
-- Amazon S3 object storage and event notifications
-- AWS Lambda serverless compute and event-driven processing
-- IAM execution-role permissions and least privilege
-- Amazon CloudWatch Logs for troubleshooting
-- JSON output and Python text processing
+## AWS Services and Technologies
 
-## Files
+- **Amazon S3:** Stores input log files and generated JSON reports.
+- **AWS Lambda:** Runs the log analyzer automatically in response to S3 events.
+- **AWS IAM:** Controls Lambda's access to input and output objects.
+- **Amazon CloudWatch Logs:** Records execution messages and helps troubleshoot errors.
+- **Python and boto3:** Process log text and interact with AWS services.
+- **JSON:** Stores the analysis results in a structured format.
 
-- `lambda_function.py`: Lambda handler
-- `sample.log`: test input
-- `sample_expected_report.json`: illustrative expected result for the sample file
+## Project Structure
 
-## Build steps (AWS Console)
+```text
+aws-serverless-log-analyzer/
+├── lambda_function.py
+├── sample.log
+├── sample_expected_report.json
+└── README.md
+```
 
-1. Choose one AWS Region and use it for S3, Lambda and CloudWatch.
-2. Create a general-purpose S3 bucket with a globally unique name. Keep Block Public Access enabled and do not make the bucket public.
-3. Create an IAM execution role for Lambda. Attach the AWS managed `AWSLambdaBasicExecutionRole` policy for CloudWatch logging. Add a custom policy restricted to your bucket and prefixes:
-   - `s3:GetObject` on `arn:aws:s3:::YOUR_BUCKET_NAME/logs/*`
-   - `s3:PutObject` on `arn:aws:s3:::YOUR_BUCKET_NAME/reports/*`
-4. Create a Lambda function named `serverless-log-analyzer`, runtime Python 3.x available in your console, and select the role created above.
-5. Paste `lambda_function.py` into the Lambda code editor and choose Deploy.
-6. Add an S3 trigger to the Lambda function. Select your bucket, event type `All object create events`, and set the prefix filter to `logs/`. This prefix is important: output reports are written to `reports/`, so they do not trigger the function again.
-7. Upload `sample.log` to the bucket under the `logs/` prefix (the S3 key must be `logs/sample.log`).
-8. Open the Lambda function's Monitor tab and view CloudWatch logs. Check the S3 bucket for `reports/sample.log.summary.json`.
+## Verified Test Results
 
-## Test checklist
+Uploaded `logs/sample.log` to the S3 bucket and verified that Lambda generated:
 
-- [ ] Lambda invocation appears in CloudWatch Logs
-- [ ] Report JSON is created under `reports/`
-- [ ] Report has the correct line total and level counts
-- [ ] Bucket remains private
+`reports/sample.log.summary.json`
 
-## Important safety and cleanup
+The generated report contained these results:
 
-- Do not upload confidential, personal or production logs.
-- Keep S3 Block Public Access enabled.
-- Do not grant `s3:*` or public access for this demo; use the narrow permissions above.
-- Check AWS Billing and Free Tier before deploying; eligibility and charges depend on your account and usage.
-- When finished, delete the test objects, Lambda function, and demo bucket if you no longer need them. Empty the bucket before deleting it. Remove any IAM policy/role created solely for this project if it is no longer needed.
+| Metric | Verified count |
+|---|---:|
+| Total log lines | 7 |
+| ERROR | 2 |
+| WARNING | 1 |
+| INFO | 3 |
+| DEBUG | 1 |
 
-## Resume bullet (use only after completing and testing)
+## How It Works
 
-Built an event-driven log analysis workflow using Amazon S3, AWS Lambda (Python), IAM and CloudWatch; automatically processed uploaded logs, counted severity levels, and generated JSON summaries with least-privilege storage permissions.
+1. A log file is uploaded under the S3 `logs/` prefix.
+2. An S3 object-created event triggers the Lambda function.
+3. Lambda reads the log file and counts INFO, WARNING, ERROR, and DEBUG entries.
+4. Lambda writes a JSON summary under the S3 `reports/` prefix.
+5. CloudWatch Logs records execution messages for troubleshooting.
 
-## LinkedIn post template (edit after successful testing)
+The S3 trigger uses the `logs/` prefix to avoid repeatedly processing reports written under `reports/`.
 
-Built a small AWS serverless project: **Serverless Log Analyzer**.
+## Deployment Guide
 
-When a log file is uploaded to Amazon S3, an S3 event triggers a Python AWS Lambda function. The function counts INFO, WARNING, ERROR and DEBUG entries and writes a JSON summary back to S3. I used IAM permissions to restrict access to the input and output prefixes and CloudWatch Logs to verify execution.
+1. Create a private S3 bucket in your chosen AWS Region. Keep Block Public Access enabled.
+2. Create a Lambda execution role with CloudWatch logging permissions.
+3. Add a narrowly scoped IAM policy allowing `s3:GetObject` on `logs/*` and `s3:PutObject` on `reports/*` for your bucket.
+4. Create the `serverless-log-analyzer` Lambda function using a Python 3.x runtime.
+5. Deploy the code from `lambda_function.py`.
+6. Configure an S3 trigger for all object-created events with the prefix `logs/`.
+7. Upload `sample.log` as `logs/sample.log`.
+8. Verify the generated report at `reports/sample.log.summary.json` and inspect the Lambda execution logs in CloudWatch.
 
-**What I practiced:** S3 event notifications, serverless compute, event-driven architecture, IAM least privilege, and CloudWatch troubleshooting.
+Replace `YOUR_BUCKET_NAME` with your own bucket name when configuring IAM resources. Use the same AWS Region for the S3 bucket and Lambda function.
 
-Next improvement: add a dashboard or alerting for repeated errors.
+## Security and Cost Considerations
 
-#AWS #AWSLambda #AmazonS3 #CloudComputing #DevOps #Python
+- Keep the S3 bucket private.
+- Grant only the permissions required to read input logs and write reports.
+- Never commit AWS credentials, access keys, passwords, or confidential logs.
+- Review AWS Billing and Free Tier usage because charges depend on your account and usage.
+- Delete test resources you no longer need. Empty the S3 bucket before deleting it, and remove dedicated IAM policies or roles only when they are no longer needed.
+
+## Skills Demonstrated
+
+AWS serverless computing, event-driven architecture, Amazon S3 event notifications, AWS Lambda, IAM permissions, CloudWatch troubleshooting, Python, boto3, and JSON processing.
+
+## Future Improvements
+
+- Add automated unit tests.
+- Add error notifications using Amazon SNS.
+- Build a dashboard showing log severity trends.
+- Add structured logging and more robust handling of malformed log files.
+
+## Resume Bullet
+
+Built and tested an event-driven AWS serverless log analyzer using Amazon S3, AWS Lambda, Python, IAM, and CloudWatch to process uploaded log files and automatically generate JSON severity summaries.
+
+## LinkedIn Post
+
+I’m excited to share a hands-on cloud project I built: **AWS Serverless Log Analyzer**.
+
+The project uses Amazon S3 and AWS Lambda to automate log analysis. When a log file is uploaded to S3, an event triggers a Python function that counts INFO, WARNING, ERROR, and DEBUG entries and generates a JSON report.
+
+**What I learned and practiced:**
+- Event-driven architecture using Amazon S3 notifications
+- Serverless computing with AWS Lambda
+- IAM permissions and least-privilege access
+- CloudWatch Logs for execution monitoring and troubleshooting
+- Python, boto3, and JSON processing
+
+I tested the workflow by uploading a sample log file and verified that the generated report contained the expected severity counts.
+
+Next, I plan to explore automated testing, alerting, and dashboard integration.
+
+GitHub: https://github.com/kshitijpawar3777-del/aws-serverless-log-analyzer
+
+#AWS #AWSLambda #AmazonS3 #CloudComputing #DevOps #Python #CloudProjects
